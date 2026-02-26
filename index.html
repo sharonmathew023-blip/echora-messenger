@@ -166,7 +166,7 @@
 </footer>
 
 <script>
-    const client = supabase.createClient("https://didvcdoopfnrywkcfzeo.supabase.co", "sb_publishable_yy19AIo_MJnFi-yqAeXgyw_eiKpdjUz");
+    const client = supabase.createClient("https://didvcdoopfnrywkcfzeo.supabase.co", "Sb_publishable_yy19AIo_MJnFi-yqAeXgyw_eiKpdjUz");
     let user = JSON.parse(localStorage.getItem("kmr_user"));
 
     let targetMsgId = null;
@@ -330,7 +330,6 @@
             const isOwn = m.sender === user.username;
             const isAdmin = m.sender === 'Kmrxz';
             
-            // Replaced manual images with dynamically generated initials avatars
             const avatarColor = isAdmin ? 'ff4d4d' : '007aff';
             const avatarPath = `https://ui-avatars.com/api/?name=${m.sender}&background=${avatarColor}&color=fff&rounded=true&bold=true`;
             
@@ -360,4 +359,5 @@
     }
 </script>
 </body>
-</html>
+                                                                                                                                                             </html>
+    
