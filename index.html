@@ -166,7 +166,8 @@
 </footer>
 
 <script>
-    const client = supabase.createClient("https://didvcdoopfnrywkcfzeo.supabase.co", "Sb_publishable_yy19AIo_MJnFi-yqAeXgyw_eiKpdjUz");
+    // FIX 1: Lowercase 's' on the sb_publishable key so Supabase accepts it
+    const client = supabase.createClient("https://didvcdoopfnrywkcfzeo.supabase.co", "sb_publishable_yy19AIo_MJnFi-yqAeXgyw_eiKpdjUz");
     let user = JSON.parse(localStorage.getItem("kmr_user"));
 
     let targetMsgId = null;
@@ -294,10 +295,11 @@
 
         if (type === 'signup') {
             const { data, error } = await client.from('profiles').insert([{ username: u, pin: p }]).select();
-            if (error) return openDiag("Error", "Username taken.");
+            if (error) return openDiag("Error", "Username taken or connection failed.");
             user = data[0];
         } else {
-            const { data } = await client.from('profiles').select('*').eq('username', u).maybeSingle();
+            const { data, error } = await client.from('profiles').select('*').eq('username', u).maybeSingle();
+            if (error) return openDiag("Error", "Connection failed. Please check your database settings.");
             if (data && data.pin == p) user = data; else return openDiag("Error", "Invalid login credentials.");
         }
         localStorage.setItem("kmr_user", JSON.stringify(user));
@@ -312,9 +314,16 @@
     }
 
     async function load() {
-        const { data: msgs } = await client.from('messages').select('*').order('created_at', {ascending:true});
-        const { data: profs } = await client.from('profiles').select('username');
+        const { data: msgs, error: msgError } = await client.from('messages').select('*').order('created_at', {ascending:true});
+        const { data: profs, error: profError } = await client.from('profiles').select('username');
         const box = document.getElementById('chat-box');
+        
+        // FIX 2: Added safety checks. If the database errors out or is empty, it stops here instead of crashing
+        if (msgError) {
+            console.error("Supabase Error:", msgError);
+            return;
+        }
+        if (!msgs) return;
         
         let chatHTML = "";
         let seenUsers = new Set();
@@ -331,7 +340,8 @@
             const isAdmin = m.sender === 'Kmrxz';
             
             const avatarColor = isAdmin ? 'ff4d4d' : '007aff';
-            const avatarPath = `https://ui-avatars.com/api/?name=${m.sender}&background=${avatarColor}&color=fff&rounded=true&bold=true`;
+            // Added encodeURIComponent to handle usernames with spaces safely
+            const avatarPath = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender)}&background=${avatarColor}&color=fff&rounded=true&bold=true`;
             
             const isImage = m.content.match(/\.(jpeg|jpg|gif|png|webp)$/i) || m.content.includes('supabase.co/storage');
             const displayContent = isImage 
@@ -359,5 +369,5 @@
     }
 </script>
 </body>
-                </html>
-    
+                                                                               </html>
+        
