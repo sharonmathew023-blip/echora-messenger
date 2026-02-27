@@ -11,12 +11,15 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
     <style>
         :root {
-            --bg: #010c14;
-            --header: #0a1929;
-            --blue: #007aff;
-            --blue-light: #66b3ff;
-            --own: #1a3a5a;
-            --other: #0f253e;
+            /* GREEN THEME */
+            --bg: #05140a;
+            --header: #0a2414;
+            --accent: #10b981; /* Emerald Green */
+            --accent-light: #6ee7b7;
+            --own: #064e3b;
+            --other: #022c22;
+            --border: #047857;
+            --input-bg: #064e3b;
             user-select: none;
         }
         html, body {
@@ -35,7 +38,7 @@
         }
         .avatar {
             width: 35px; height: 35px; border-radius: 50%;
-            margin-right: 8px; vertical-align: middle; border: 1.5px solid var(--blue);
+            margin-right: 8px; vertical-align: middle; border: 1.5px solid var(--accent);
         }
         #splash-screen {
             position: fixed; inset: 0; background: var(--bg); display: flex;
@@ -45,14 +48,14 @@
             position: fixed; inset: 0; background: var(--bg); z-index: 3000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .auth-logo-top { font-size: 60px; color: var(--blue); margin-bottom: 20px; text-align: center; }
+        .auth-logo-top { font-size: 60px; color: var(--accent); margin-bottom: 20px; text-align: center; }
         .auth-card {
             background: var(--header); padding: 25px; border-radius: 15px;
-            width: 320px; text-align: center; border: 1px solid #1a3a5a; position: relative;
+            width: 320px; text-align: center; border: 1px solid var(--border); position: relative;
         }
-        .login-icon { font-size: 40px; color: var(--blue); margin-bottom: 15px; display: block; }
+        .login-icon { font-size: 40px; color: var(--accent); margin-bottom: 15px; display: block; }
         .btn-full {
-            background: var(--blue); border: none; width: 100%; height: 48px;
+            background: var(--accent); border: none; width: 100%; height: 48px;
             border-radius: 8px; color: white; font-weight: bold; cursor: pointer;
             margin-top: 15px; font-size: 16px; transition: 0.2s;
         }
@@ -63,11 +66,11 @@
         }
         .dialogue-box {
             background: var(--header); width: 85%; max-width: 320px;
-            border-radius: 15px; padding: 25px; text-align: center; border: 1px solid #1a3a5a;
+            border-radius: 15px; padding: 25px; text-align: center; border: 1px solid var(--border);
         }
         header {
             flex-shrink: 0; height: 60px; background: var(--header); display: flex;
-            align-items: center; padding: 0 15px; border-bottom: 1px solid #1a3a5a;
+            align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border);
             justify-content: space-between;
         }
         #chat-box {
@@ -87,36 +90,36 @@
             padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: center;
         }
         .btn-media {
-            background: #1e293b; border: none; width: 45px; height: 45px;
+            background: var(--input-bg); border: none; width: 45px; height: 45px;
             border-radius: 10px; color: white; cursor: pointer; display: flex;
             align-items: center; justify-content: center; font-size: 18px; transition: 0.2s; flex-shrink: 0;
         }
         .btn-media:active { opacity: 0.7; }
         input[type="text"], input[type="password"] {
-            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155;
-            background: #1e293b; color: white; outline: none; box-sizing: border-box; margin-bottom: 10px;
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--input-bg); color: white; outline: none; box-sizing: border-box; margin-bottom: 10px;
         }
         #msg-input { margin-bottom: 0; flex: 1; }
         .btn-send {
-            background: var(--blue); border: none; width: 50px; height: 45px;
+            background: var(--accent); border: none; width: 50px; height: 45px;
             border-radius: 50%; color: white; flex-shrink: 0; cursor: pointer; font-size: 18px;
         }
         .hidden { display: none !important; }
         #drawer {
             position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
             background: var(--header); z-index: 2500; transform: translateX(-100%);
-            transition: 0.3s; padding: 20px; border-right: 1px solid #1a3a5a;
+            transition: 0.3s; padding: 20px; border-right: 1px solid var(--border);
         }
         #drawer.open { transform: translateX(0); }
         #context-menu {
-            position: fixed; background: var(--header); border: 1px solid #1a3a5a;
+            position: fixed; background: var(--header); border: 1px solid var(--border);
             border-radius: 8px; z-index: 6000; display: none; padding: 5px 0;
             min-width: 140px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         .context-item {
             padding: 12px 15px; cursor: pointer; color: white; font-size: 14px; transition: 0.2s;
         }
-        .context-item:hover { background: #1a3a5a; }
+        .context-item:hover { background: var(--border); }
         .c-red { color: #ff4d4d; }
         #preview-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 7000;
@@ -132,7 +135,7 @@
 <body onclick="closeContext(); closeDrawerOutside(event)">
     <div id="dialogue-overlay">
         <div class="dialogue-box">
-            <h3 id="diag-title" style="color:var(--blue); margin-top:0;"></h3>
+            <h3 id="diag-title" style="color:var(--accent); margin-top:0;"></h3>
             <p id="diag-text" style="line-height:1.5;"></p>
             <button class="btn-full" style="width: 120px; margin-top:10px;" onclick="closeDiag()">OK</button>
         </div>
@@ -149,12 +152,12 @@
         <div class="context-item c-red" id="c-delete" onclick="deleteMessage()"><i class="fa-solid fa-trash" style="margin-right: 8px;"></i> Delete</div>
     </div>
     <div id="splash-screen">
-        <i class="fa-solid fa-comment-dots" style="font-size: 80px; color: var(--blue);"></i>
+        <i class="fa-solid fa-comment-dots" style="font-size: 80px; color: var(--accent);"></i>
         <h1 style="color: white; font-family: sans-serif; margin-top: 15px;">Echora</h1>
     </div>
     <div id="drawer">
-        <h2 style="color:var(--blue);">Echora</h2>
-        <p id="drawer-user" style="margin: -10px 0 15px 0; font-size: 14px; color: var(--blue-light); border-bottom: 1px solid #1a3a5a; padding-bottom: 10px;"></p>
+        <h2 style="color:var(--accent);">Echora</h2>
+        <p id="drawer-user" style="margin: -10px 0 15px 0; font-size: 14px; color: var(--accent-light); border-bottom: 1px solid var(--border); padding-bottom: 10px;"></p>
         <div onclick="toggleDrawer()" style="padding:15px; cursor:pointer;"><i class="fa-solid fa-house" style="margin-right:10px;"></i> Home</div>
         <div onclick="openDiag('About', 'Echora Messenger v3.1\nCreated by Kmrxz\nJoin a part of our small journey.')" style="padding:15px; cursor:pointer;"><i class="fa-solid fa-circle-info" style="margin-right:10px;"></i> About</div>
         <div onclick="toggleDrawer(); logout()" style="padding:15px; cursor:pointer; color:#f87171; margin-top:20px;"><i class="fa-solid fa-door-open" style="margin-right:10px;"></i> Logout</div>
@@ -170,7 +173,7 @@
             <div style="font-size:13px; margin:15px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <input type="checkbox" id="l-agree" style="width:auto; margin:0;"> I agree to the policy
             </div>
-            <p onclick="toggleAuth()" style="color:var(--blue); cursor:pointer; margin-top:15px; font-weight: bold;">Create Account</p>
+            <p onclick="toggleAuth()" style="color:var(--accent); cursor:pointer; margin-top:15px; font-weight: bold;">Create Account</p>
         </div>
         <div class="auth-card hidden" id="signup-box">
             <i class="fa-solid fa-user-plus login-icon"></i>
@@ -181,12 +184,12 @@
             <div style="font-size:13px; margin:15px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <input type="checkbox" id="s-agree" style="width:auto; margin:0;"> I agree to the policy
             </div>
-            <p onclick="toggleAuth()" style="color:var(--blue); cursor:pointer; margin-top:15px; font-weight: bold;">Back to Login</p>
+            <p onclick="toggleAuth()" style="color:var(--accent); cursor:pointer; margin-top:15px; font-weight: bold;">Back to Login</p>
         </div>
     </div>
     <header>
         <span onclick="toggleDrawer()" style="font-size:24px; cursor:pointer;"><i class="fa-solid fa-bars"></i></span>
-        <b style="color:var(--blue); font-size: 20px;">Echora Chat</b>
+        <b style="color:var(--accent); font-size: 20px;">Echora Chat</b>
         <div style="width:24px"></div>
     </header>
     <div id="chat-box"></div>
@@ -387,14 +390,14 @@
                 }
                 const isOwn = m.sender === user.username;
                 const isAdmin = m.sender === 'Kmrxz';
-                const avatarColor = isAdmin ? 'ff4d4d' : '007aff';
+                const avatarColor = isAdmin ? 'ff4d4d' : '10b981'; /* Updated API call color to green */
                 const avatarPath = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender)}&background=${avatarColor}&color=fff&rounded=true&bold=true`;
                 const isImage = m.content.match(/\.(jpeg|jpg|gif|png|webp)$/i) || m.content.includes('supabase.co/storage');
                 const displayContent = isImage ? `<img src="${m.content}" style="max-width:100%; border-radius:10px; cursor:pointer;" onclick="openPreview('${m.content}')">` : m.content;
                 
                 chatHTML += `<div class="bubble ${isOwn ? 'own' : 'other'}" oncontextmenu="showContextMenu(event, this)" data-id="${m.id}" data-sender="${m.sender}" data-content="${encodeURIComponent(m.content)}">
                     <img src="${avatarPath}" class="avatar">
-                    <small class="${isAdmin ? 'admin-name' : ''}" style="color:var(--blue-light); font-weight:bold;">${displayName}</small><br>
+                    <small class="${isAdmin ? 'admin-name' : ''}" style="color:var(--accent-light); font-weight:bold;">${displayName}</small><br>
                     <div style="margin-top:5px;">${displayContent}</div>
                 </div>`;
             });
