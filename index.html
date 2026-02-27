@@ -1,1 +1,418 @@
-@DOCTYPE html\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">\n    <title>Echora Messenger</title>\n    \n    <meta name="description" content="Welcome to Echora world chat, but limited to a few users. Join a part of our small journey.">\n    <meta property="og:title" content="Echora Messenger">\n    <meta property="og:description" content="Join a part of our small journey">\n\n    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>\n    \n    <style>\n        :root { \n            --bg: #010c14; --header: #0a1929; --blue: #007aff; \n            --blue-light: #66b3ff; --own: #1a3a5a; --other: #0f253e;\n            user-select: none;\n        }\n        \n        html, body { \n            margin: 0; padding: 0; width: 100%; \n            height: 100%; height: 100dvh; \n            background: var(--bg); font-family: sans-serif; \n            color: white; display: flex; flex-direction: column; overflow: hidden; \n        }\n\n        .admin-name { color: #ff4d4d !important; font-weight: bold; text-shadow: 0 0 8px #ff0000; animation: glow 1.5s infinite alternate; }\n        @keyframes glow { from { text-shadow: 0 0 5px #ff0000; } to { text-shadow: 0 0 15px #ff4d4d; } }\n\n        .avatar { width: 35px; height: 35px; border-radius: 50%; margin-right: 8px; vertical-align: middle; border: 1.5px solid var(--blue); }\n\n        #splash-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; }\n        \n        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; }\n        .auth-logo-top { font-size: 60px; color: var(--blue); margin-bottom: 20px; text-align: center; }\n        \n        .auth-card { background: var(--header); padding: 25px; border-radius: 15px; width: 320px; text-align: center; border: 1px solid #1a3a5a; position: relative; }\n\n        .login-icon { font-size: 40px; color: var(--blue); margin-bottom: 15px; display: block; }\n\n        .btn-full { background: var(--blue); border: none; width: 100%; height: 48px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 16px; transition: 0.2s; }\n        .btn-full:active { opacity: 0.8; transform: scale(0.98); }\n\n        #dialogue-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; display: none; align-items: center; justify-content: center; }\n        .dialogue-box { background: var(--header); width: 85%; max-width: 320px; border-radius: 15px; padding: 25px; text-align: center; border: 1px solid #1a3a5a; }\n\n        header { flex-shrink: 0; height: 60px; background: var(--header); display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #1a3a5a; justify-content: space-between; }\n        \n        #chat-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }\n        \n        .join-alert { align-self: center; font-size: 12px; color: #64748b; margin: 5px 0; font-style: italic; }\n\n        .bubble { max-width: 75%; padding: 12px; border-radius: 18px; font-size: 15px; position: relative; }\n        .own { align-self: flex-end; background: var(--own); border-bottom-right-radius: 4px; }\n        .other { align-self: flex-start; background: var(--other); border-bottom-left-radius: 4px; }\n\n        footer { \n            flex-shrink: 0; background: var(--header); padding: 10px; \n            padding-bottom: calc(10px + env(safe-area-inset-bottom)); \n            display: flex; gap: 8px; align-items: center; \n        }\n        \n        .btn-media { background: #1e293b; border: none; width: 45px; height: 45px; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: 0.2s; flex-shrink: 0; }\n        .btn-media:active { opacity: 0.7; }\n        \n        input[type="text"], input[type="password"] { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: white; outline: none; box-sizing: border-box; margin-bottom: 10px; }\n        \n        #msg-input { margin-bottom: 0; flex: 1; }\n        \n        .btn-send { background: var(--blue); border: none; width: 50px; height: 45px; border-radius: 50%; color: white; flex-shrink: 0; cursor: pointer; font-size: 18px; }\n        \n        .hidden { display: none !important; }\n        #drawer { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; background: var(--header); z-index: 2500; transform: translateX(-100%); transition: 0.3s; padding: 20px; border-right: 1px solid #1a3a5a; }\n        #drawer.open { transform: translateX(0); }\n\n        #context-menu { position: fixed; background: var(--header); border: 1px solid #1a3a5a; border-radius: 8px; z-index: 6000; display: none; padding: 5px 0; min-width: 140px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }\n        .context-item { padding: 12px 15px; cursor: pointer; color: white; font-size: 14px; transition: 0.2s; }\n        .context-item:hover { background: #1a3a5a; }\n        .c-red { color: #ff4d4d; }\n\n        #preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 7000; display: none; align-items: center; justify-content: center; flex-direction: column; }\n        #preview-img { max-width: 95%; max-height: 80vh; border-radius: 8px; object-fit: contain; }\n        .preview-tools { position: absolute; top: 30px; right: 30px; display: flex; gap: 20px; font-size: 26px; color: white; cursor: pointer; }\n    </style>\n</head>\n<body onclick="closeContext(); closeDrawerOutside(event)">\n\n<div id="dialogue-overlay">\n    <div class="dialogue-box">\n        <h3 id="diag-title" style="color:var(--blue); margin-top:0;"></h3>\n        <p id="diag-text" style="line-height:1.5;"></p>\n        <button class="btn-full" style="width: 120px; margin-top:10px;" onclick="closeDiag()">OK</button>\n    </div>\n</div>\n\n<div id="preview-overlay">\n    <div class="preview-tools">\n        <i class="fa-solid fa-download" onclick="downloadPreview()"></i>\n        <i class="fa-solid fa-xmark" onclick="closePreview()"></i>\n    </div>\n    <img id="preview-img" src="">\n</div>\n\n<div id="context-menu">\n    <div class="context-item" onclick="copyMessage()"><i class="fa-solid fa-copy" style="margin-right: 8px;"></i> Copy Text</div>\n    <div class="context-item c-red" id="c-delete" onclick="deleteMessage()"><i class="fa-solid fa-trash" style="margin-right: 8px;"></i> Delete</div>\n</div>\n\n<div id="splash-screen">\n    <i class="fa-solid fa-comment-dots" style="font-size: 80px; color: var(--blue);"></i>\n    <h1 style="color: white; font-family: sans-serif; margin-top: 15px;">Echora</h1>\n</div>\n\n<div id="drawer">\n    <h2 style="color:var(--blue);">Echora</h2>\n    <p id="drawer-user" style="margin: -10px 0 15px 0; font-size: 14px; color: var(--blue-light); border-bottom: 1px solid #1a3a5a; padding-bottom: 10px;"></p>\n    \n    <div onclick="toggleDrawer()" style="padding:15px; cursor:pointer;"><i class="fa-solid fa-house" style="margin-right:10px;"></i> Home</div>\n    <div onclick="openDiag('About', 'Echora Messenger v3.1\nCreated by Kmrxz\nJoin a part of our small journey.')" style="padding:15px; cursor:pointer;"><i class="fa-solid fa-circle-info" style="margin-right:10px;"></i> About</div>\n    <div onclick="toggleDrawer(); logout()" style="padding:15px; cursor:pointer; color:#f87171; margin-top:20px;"><i class="fa-solid fa-door-open" style="margin-right:10px;"></i> Logout</div>\n</div>\n\n<div id="auth-screen">\n    <i class="fa-solid fa-comment-dots auth-logo-top"></i>\n    \n    <div class="auth-card" id="login-box">\n        <i class="fa-solid fa-circle-user login-icon"></i>\n        <h2 style="margin-top:0;">Login</h2>\n        <input type="text" id="l-user" placeholder="Username">\n        <input type="password" id="l-pin" maxlength="4" placeholder="PIN">\n        <button class="btn-full" onclick="doAuth('login')">Login</button>\n        <div style="font-size:13px; margin:15px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">\n            <input type="checkbox" id="l-agree" style="width:auto; margin:0;"> I agree to the policy\n        </div>\n        <p onclick="toggleAuth()" style="color:var(--blue); cursor:pointer; margin-top:15px; font-weight: bold;">Create Account</p>\n    </div>\n\n    <div class="auth-card hidden" id="signup-box">\n        <i class="fa-solid fa-user-plus login-icon"></i>\n        <h2 style="margin-top:0;">Sign Up</h2>\n        <input type="text" id="s-user" placeholder="Username">\n        <input type="password" id="s-pin" maxlength="4" placeholder="PIN">\n        <button class="btn-full" onclick="doAuth('signup')">Sign Up</button>\n        <div style="font-size:13px; margin:15px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">\n            <input type="checkbox" id="s-agree" style="width:auto; margin:0;"> I agree to the policy\n        </div>\n        <p onclick="toggleAuth()" style="color:var(--blue); cursor:pointer; margin-top:15px; font-weight: bold;">Back to Login</p>\n    </div>\n</div>\n\n<header>\n    <span onclick="toggleDrawer()" style="font-size:24px; cursor:pointer;"><i class="fa-solid fa-bars"></i></span>\n    <b style="color:var(--blue); font-size: 20px;">Echora Chat</b>\n    <div style="width:24px"></div>\n</header>\n\n<div id="chat-box"></div>\n\n<footer>\n    <input type="file" id="media-upload" class="hidden" accept="image/*" onchange="uploadMedia(event)">\n    <button class="btn-media" id="media-btn" onclick="document.getElementById('media-upload').click()"><i class="fa-solid fa-plus"></i></button>\n    <input type="text" id="msg-input" placeholder="Message...">\n    <button class="btn-send" onclick="send()"><i class="fa-solid fa-paper-plane"></i></button>\n</footer>\n\n<script>\n    // FIX 1: Lowercase 's' on the sb_publishable key so Supabase accepts it\n    const client = supabase.createClient("https://didvcdoopfnrywkcfzeo.supabase.co", "sb_publishable_yy19AIo_MJnFi-yqAeXgyw_eiKpdjUz");\n    let user = JSON.parse(localStorage.getItem("kmr_user"));\n\n    let targetMsgId = null;\n    let targetMsgContent = null;\n\n    window.onload = () => {\n        setTimeout(() => { document.getElementById('splash-screen').classList.add('hidden'); }, 2000);\n        if (user) init();\n        \n        document.getElementById('msg-input').addEventListener('focus', () => {\n            setTimeout(() => {\n                const box = document.getElementById('chat-box');\n                box.scrollTop = box.scrollHeight;\n            }, 300);\n        });\n    };\n\n    function openDiag(t, m) { \n        document.getElementById('diag-title').innerText = t;\n        document.getElementById('diag-text').innerText = m;\n        document.getElementById('dialogue-overlay').style.display = 'flex';\n    }\n    function closeDiag() { document.getElementById('dialogue-overlay').style.display = 'none'; }\n    function toggleAuth() { document.getElementById('login-box').classList.toggle('hidden'); document.getElementById('signup-box').classList.toggle('hidden'); }\n    \n    function toggleDrawer() { document.getElementById('drawer').classList.toggle('open'); }\n    function closeDrawerOutside(e) {\n        const drawer = document.getElementById('drawer');\n        if (drawer.classList.contains('open') && !drawer.contains(e.target) && !e.target.closest('.fa-bars')) {\n            toggleDrawer();\n        }\n    }\n\n    function showContextMenu(e, elem) {\n        e.preventDefault();\n        targetMsgId = elem.getAttribute('data-id');\n        targetMsgContent = decodeURIComponent(elem.getAttribute('data-content'));\n        const sender = elem.getAttribute('data-sender');\n        \n        const menu = document.getElementById('context-menu');\n        menu.style.display = 'block';\n        \n        let x = e.pageX; let y = e.pageY;\n        if (x + 150 > window.innerWidth) x = window.innerWidth - 150;\n        if (y + 100 > window.innerHeight) y = window.innerHeight - 100;\n        \n        menu.style.left = x + 'px'; menu.style.top = y + 'px';\n        \n        const canDelete = (user.username === 'Kmrxz' || user.username === sender);\n        document.getElementById('c-delete').style.display = canDelete ? 'block' : 'none';\n    }\n\n    function closeContext() {\n        const menu = document.getElementById('context-menu');\n        if(menu) menu.style.display = 'none';\n    }\n\n    async function copyMessage() {\n        if (!targetMsgContent) return;\n        try { await navigator.clipboard.writeText(targetMsgContent); } catch(e) {}\n        closeContext();\n    }\n\n    async function deleteMessage() {\n        if (!targetMsgId) return;\n        await client.from('messages').delete().eq('id', targetMsgId);\n        closeContext();\n    }\n\n    async function uploadMedia(e) {\n        const file = e.target.files[0];\n        if (!file) return;\n        \n        const btn = document.getElementById('media-btn');\n        const ogHTML = btn.innerHTML;\n        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';\n        \n        const path = `uploads/${Date.now()}_${file.name}`;\n        const { data, error } = await client.storage.from('media').upload(path, file);\n        \n        if (error) {\n            btn.innerHTML = ogHTML;\n            return openDiag("Error", "Upload failed.");\n        }\n        \n        const { data: { publicUrl } } = client.storage.from('media').getPublicUrl(path);\n        await client.from('messages').insert([{ sender: user.username, content: publicUrl }]);\n        \n        btn.innerHTML = ogHTML;\n        e.target.value = ""; \n    }\n\n    function openPreview(src) {\n        document.getElementById('preview-img').src = src;\n        document.getElementById('preview-overlay').style.display = 'flex';\n    }\n\n    function closePreview() {\n        document.getElementById('preview-overlay').style.display = 'none';\n    }\n\n    async function downloadPreview() {\n        const src = document.getElementById('preview-img').src;\n        try {\n            const res = await fetch(src);\n            const blob = await res.blob();\n            const url = window.URL.createObjectURL(blob);\n            const a = document.createElement('a');\n            a.href = url;\n            a.download = `Echora_${Date.now()}.png`;\n            a.click();\n            window.URL.revokeObjectURL(url);\n        } catch (e) {\n            window.open(src, '_blank'); \n        }\n    }\n\n    async function doAuth(type) {\n        const isL = type === 'login';\n        const u = document.getElementById(isL ? 'l-user' : 's-user').value.trim();\n        const p = document.getElementById(isL ? 'l-pin' : 's-pin').value.trim();\n        const agree = document.getElementById(isL ? 'l-agree' : 's-agree').checked;\n\n        if (!u || !p || !agree) return openDiag("Notice", "Please fill all fields and accept the policy.");\n\n        if (type === 'signup') {\n            const { data, error } = await client.from('profiles').insert([{ username: u, pin: p }]).select();\n            if (error) return openDiag("Error", "Username taken or connection failed.");\n            user = data[0];\n        } else {\n            const { data, error } = await client.from('profiles').select('*').eq('username', u).maybeSingle();\n            if (error) return openDiag("Error", "Connection failed. Please check your database settings.");\n            if (data && data.pin == p) user = data; else return openDiag("Error", "Invalid login credentials.");\n        }\n        localStorage.setItem("kmr_user", JSON.stringify(user));\n        location.reload();\n    }\n\n    function init() {\n        document.getElementById('drawer-user').innerText = `Hey, ${user.username}`;\n        document.getElementById('auth-screen').classList.add('hidden');\n        load();\n        client.channel('room1').on('postgres_changes', {event:'*', schema:'public', table:'messages'}, load).subscribe();\n    }\n\n    async function load() {\n        const { data: msgs, error: msgError } = await client.from('messages').select('*').order('created_at', {ascending:true});\n        const { data: profs, error: profError } = await client.from('profiles').select('username');\n        const box = document.getElementById('chat-box');\n        \n        // FIX 2: Added safety checks. If the database errors out or is empty, it stops here instead of crashing\n        if (msgError) {\n            console.error("Supabase Error:", msgError);\n            return;\n        }\n        if (!msgs) return;\n        \n        let chatHTML = "";\n        let seenUsers = new Set();\n\n        msgs.forEach(m => {\n            const displayName = (m.sender === 'Kmrxz') ? "KMRXZ(admin)" : m.sender;\n\n            if (!seenUsers.has(m.sender)) {\n                chatHTML += `<div class="join-alert">${displayName} joined the chat, Say hi</div>`;\n                seenUsers.add(m.sender);\n            }\n            \n            const isOwn = m.sender === user.username;\n            const isAdmin = m.sender === 'Kmrxz';\n            \n            const avatarColor = isAdmin ? 'ff4d4d' : '007aff';\n            // Added encodeURIComponent to handle usernames with spaces safely\n            const avatarPath = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender)}&background=${avatarColor}&color=fff&rounded=true&bold=true`;\n            \n            const isImage = m.content.match(/\.(jpeg|jpg|gif|png|webp)$/i) || m.content.includes('supabase.co/storage');\n            const displayContent = isImage \n                ? `<img src="${m.content}" style="max-width:100%; border-radius:10px; cursor:pointer;" onclick="openPreview('${m.content}')">` \n                : m.content;\n            \n            chatHTML += `\n                <div class="bubble ${isOwn ? 'own' : 'other'}" oncontextmenu="showContextMenu(event, this)" data-id="${m.id}" data-sender="${m.sender}" data-content="${encodeURIComponent(m.content)}">\n                    <img src="${avatarPath}" class="avatar">\n                    <small class="${isAdmin ? 'admin-name' : ''}" style="color:var(--blue-light); font-weight:bold;">${displayName}</small><br>\n                    <div style="margin-top:5px;">${displayContent}</div>\n                </div>`;\n        });\n\n        box.innerHTML = chatHTML;\n        box.scrollTop = box.scrollHeight;\n    }\n\n    function logout() { localStorage.clear(); location.reload(); }\n    async function send() {\n        const inp = document.getElementById('msg-input');\n        if (!inp.value.trim()) return;\n        await client.from('messages').insert([{ sender: user.username, content: inp.value }]);\n        inp.value = '';\n    }\n</script>\n</body>\n                                                                               </html>\n
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Echora Messenger</title>
+    <meta name="description" content="Welcome to Echora world chat, but limited to a few users. Join a part of our small journey.">
+    <meta property="og:title" content="Echora Messenger">
+    <meta property="og:description" content="Join a part of our small journey">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+    <style>
+        :root {
+            --bg: #010c14;
+            --header: #0a1929;
+            --blue: #007aff;
+            --blue-light: #66b3ff;
+            --own: #1a3a5a;
+            --other: #0f253e;
+            user-select: none;
+        }
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh;
+            background: var(--bg); font-family: sans-serif; color: white;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .admin-name {
+            color: #ff4d4d !important; font-weight: bold;
+            text-shadow: 0 0 8px #ff0000;
+            animation: glow 1.5s infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 5px #ff0000; }
+            to { text-shadow: 0 0 15px #ff4d4d; }
+        }
+        .avatar {
+            width: 35px; height: 35px; border-radius: 50%;
+            margin-right: 8px; vertical-align: middle; border: 1.5px solid var(--blue);
+        }
+        #splash-screen {
+            position: fixed; inset: 0; background: var(--bg); display: flex;
+            align-items: center; justify-content: center; z-index: 9999; flex-direction: column;
+        }
+        #auth-screen {
+            position: fixed; inset: 0; background: var(--bg); z-index: 3000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .auth-logo-top { font-size: 60px; color: var(--blue); margin-bottom: 20px; text-align: center; }
+        .auth-card {
+            background: var(--header); padding: 25px; border-radius: 15px;
+            width: 320px; text-align: center; border: 1px solid #1a3a5a; position: relative;
+        }
+        .login-icon { font-size: 40px; color: var(--blue); margin-bottom: 15px; display: block; }
+        .btn-full {
+            background: var(--blue); border: none; width: 100%; height: 48px;
+            border-radius: 8px; color: white; font-weight: bold; cursor: pointer;
+            margin-top: 15px; font-size: 16px; transition: 0.2s;
+        }
+        .btn-full:active { opacity: 0.8; transform: scale(0.98); }
+        #dialogue-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .dialogue-box {
+            background: var(--header); width: 85%; max-width: 320px;
+            border-radius: 15px; padding: 25px; text-align: center; border: 1px solid #1a3a5a;
+        }
+        header {
+            flex-shrink: 0; height: 60px; background: var(--header); display: flex;
+            align-items: center; padding: 0 15px; border-bottom: 1px solid #1a3a5a;
+            justify-content: space-between;
+        }
+        #chat-box {
+            flex: 1; overflow-y: auto; padding: 15px; display: flex;
+            flex-direction: column; gap: 10px;
+        }
+        .join-alert {
+            align-self: center; font-size: 12px; color: #64748b; margin: 5px 0; font-style: italic;
+        }
+        .bubble {
+            max-width: 75%; padding: 12px; border-radius: 18px; font-size: 15px; position: relative;
+        }
+        .own { align-self: flex-end; background: var(--own); border-bottom-right-radius: 4px; }
+        .other { align-self: flex-start; background: var(--other); border-bottom-left-radius: 4px; }
+        footer {
+            flex-shrink: 0; background: var(--header); padding: 10px;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: center;
+        }
+        .btn-media {
+            background: #1e293b; border: none; width: 45px; height: 45px;
+            border-radius: 10px; color: white; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; font-size: 18px; transition: 0.2s; flex-shrink: 0;
+        }
+        .btn-media:active { opacity: 0.7; }
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155;
+            background: #1e293b; color: white; outline: none; box-sizing: border-box; margin-bottom: 10px;
+        }
+        #msg-input { margin-bottom: 0; flex: 1; }
+        .btn-send {
+            background: var(--blue); border: none; width: 50px; height: 45px;
+            border-radius: 50%; color: white; flex-shrink: 0; cursor: pointer; font-size: 18px;
+        }
+        .hidden { display: none !important; }
+        #drawer {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
+            background: var(--header); z-index: 2500; transform: translateX(-100%);
+            transition: 0.3s; padding: 20px; border-right: 1px solid #1a3a5a;
+        }
+        #drawer.open { transform: translateX(0); }
+        #context-menu {
+            position: fixed; background: var(--header); border: 1px solid #1a3a5a;
+            border-radius: 8px; z-index: 6000; display: none; padding: 5px 0;
+            min-width: 140px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .context-item {
+            padding: 12px 15px; cursor: pointer; color: white; font-size: 14px; transition: 0.2s;
+        }
+        .context-item:hover { background: #1a3a5a; }
+        .c-red { color: #ff4d4d; }
+        #preview-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 7000;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+        }
+        #preview-img { max-width: 95%; max-height: 80vh; border-radius: 8px; object-fit: contain; }
+        .preview-tools {
+            position: absolute; top: 30px; right: 30px; display: flex;
+            gap: 20px; font-size: 26px; color: white; cursor: pointer;
+        }
+    </style>
+</head>
+<body onclick="closeContext(); closeDrawerOutside(event)">
+    <div id="dialogue-overlay">
+        <div class="dialogue-box">
+            <h3 id="diag-title" style="color:var(--blue); margin-top:0;"></h3>
+            <p id="diag-text" style="line-height:1.5;"></p>
+            <button class="btn-full" style="width: 120px; margin-top:10px;" onclick="closeDiag()">OK</button>
+        </div>
+    </div>
+    <div id="preview-overlay">
+        <div class="preview-tools">
+            <i class="fa-solid fa-download" onclick="downloadPreview()"></i>
+            <i class="fa-solid fa-xmark" onclick="closePreview()"></i>
+        </div>
+        <img id="preview-img" src="">
+    </div>
+    <div id="context-menu">
+        <div class="context-item" onclick="copyMessage()"><i class="fa-solid fa-copy" style="margin-right: 8px;"></i> Copy Text</div>
+        <div class="context-item c-red" id="c-delete" onclick="deleteMessage()"><i class="fa-solid fa-trash" style="margin-right: 8px;"></i> Delete</div>
+    </div>
+    <div id="splash-screen">
+        <i class="fa-solid fa-comment-dots" style="font-size: 80px; color: var(--blue);"></i>
+        <h1 style="color: white; font-family: sans-serif; margin-top: 15px;">Echora</h1>
+    </div>
+    <div id="drawer">
+        <h2 style="color:var(--blue);">Echora</h2>
+        <p id="drawer-user" style="margin: -10px 0 15px 0; font-size: 14px; color: var(--blue-light); border-bottom: 1px solid #1a3a5a; padding-bottom: 10px;"></p>
+        <div onclick="toggleDrawer()" style="padding:15px; cursor:pointer;"><i class="fa-solid fa-house" style="margin-right:10px;"></i> Home</div>
+        <div onclick="openDiag('About', 'Echora Messenger v3.1\nCreated by Kmrxz\nJoin a part of our small journey.')" style="padding:15px; cursor:pointer;"><i class="fa-solid fa-circle-info" style="margin-right:10px;"></i> About</div>
+        <div onclick="toggleDrawer(); logout()" style="padding:15px; cursor:pointer; color:#f87171; margin-top:20px;"><i class="fa-solid fa-door-open" style="margin-right:10px;"></i> Logout</div>
+    </div>
+    <div id="auth-screen">
+        <i class="fa-solid fa-comment-dots auth-logo-top"></i>
+        <div class="auth-card" id="login-box">
+            <i class="fa-solid fa-circle-user login-icon"></i>
+            <h2 style="margin-top:0;">Login</h2>
+            <input type="text" id="l-user" placeholder="Username">
+            <input type="password" id="l-pin" maxlength="4" placeholder="PIN">
+            <button class="btn-full" onclick="doAuth('login')">Login</button>
+            <div style="font-size:13px; margin:15px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <input type="checkbox" id="l-agree" style="width:auto; margin:0;"> I agree to the policy
+            </div>
+            <p onclick="toggleAuth()" style="color:var(--blue); cursor:pointer; margin-top:15px; font-weight: bold;">Create Account</p>
+        </div>
+        <div class="auth-card hidden" id="signup-box">
+            <i class="fa-solid fa-user-plus login-icon"></i>
+            <h2 style="margin-top:0;">Sign Up</h2>
+            <input type="text" id="s-user" placeholder="Username">
+            <input type="password" id="s-pin" maxlength="4" placeholder="PIN">
+            <button class="btn-full" onclick="doAuth('signup')">Sign Up</button>
+            <div style="font-size:13px; margin:15px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <input type="checkbox" id="s-agree" style="width:auto; margin:0;"> I agree to the policy
+            </div>
+            <p onclick="toggleAuth()" style="color:var(--blue); cursor:pointer; margin-top:15px; font-weight: bold;">Back to Login</p>
+        </div>
+    </div>
+    <header>
+        <span onclick="toggleDrawer()" style="font-size:24px; cursor:pointer;"><i class="fa-solid fa-bars"></i></span>
+        <b style="color:var(--blue); font-size: 20px;">Echora Chat</b>
+        <div style="width:24px"></div>
+    </header>
+    <div id="chat-box"></div>
+    <footer>
+        <input type="file" id="media-upload" class="hidden" accept="image/*" onchange="uploadMedia(event)">
+        <button class="btn-media" id="media-btn" onclick="document.getElementById('media-upload').click()"><i class="fa-solid fa-plus"></i></button>
+        <input type="text" id="msg-input" placeholder="Message...">
+        <button class="btn-send" onclick="send()"><i class="fa-solid fa-paper-plane"></i></button>
+    </footer>
+
+    <script>
+        const client = supabase.createClient("https://didvcdoopfnrywkcfzeo.supabase.co", "sb_publishable_yy19AIo_MJnFi-yqAeXgyw_eiKpdjUz");
+        let user = JSON.parse(localStorage.getItem("kmr_user"));
+        let targetMsgId = null;
+        let targetMsgContent = null;
+
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('splash-screen').classList.add('hidden');
+            }, 2000);
+            if (user) init();
+            document.getElementById('msg-input').addEventListener('focus', () => {
+                setTimeout(() => {
+                    const box = document.getElementById('chat-box');
+                    box.scrollTop = box.scrollHeight;
+                }, 300);
+            });
+        };
+
+        document.getElementById('msg-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                send();
+            }
+        });
+
+        function openDiag(t, m) {
+            document.getElementById('diag-title').innerText = t;
+            document.getElementById('diag-text').innerText = m;
+            document.getElementById('dialogue-overlay').style.display = 'flex';
+        }
+
+        function closeDiag() {
+            document.getElementById('dialogue-overlay').style.display = 'none';
+        }
+
+        function toggleAuth() {
+            document.getElementById('login-box').classList.toggle('hidden');
+            document.getElementById('signup-box').classList.toggle('hidden');
+        }
+
+        function toggleDrawer() {
+            document.getElementById('drawer').classList.toggle('open');
+        }
+
+        function closeDrawerOutside(e) {
+            const drawer = document.getElementById('drawer');
+            if (drawer.classList.contains('open') && !drawer.contains(e.target) && !e.target.closest('.fa-bars')) {
+                toggleDrawer();
+            }
+        }
+
+        function showContextMenu(e, elem) {
+            e.preventDefault();
+            targetMsgId = elem.getAttribute('data-id');
+            targetMsgContent = decodeURIComponent(elem.getAttribute('data-content'));
+            const sender = elem.getAttribute('data-sender');
+            const menu = document.getElementById('context-menu');
+            
+            menu.style.display = 'block';
+            let x = e.pageX;
+            let y = e.pageY;
+            if (x + 150 > window.innerWidth) x = window.innerWidth - 150;
+            if (y + 100 > window.innerHeight) y = window.innerHeight - 100;
+            
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            
+            const canDelete = (user.username === 'Kmrxz' || user.username === sender);
+            document.getElementById('c-delete').style.display = canDelete ? 'block' : 'none';
+        }
+
+        function closeContext() {
+            const menu = document.getElementById('context-menu');
+            if(menu) menu.style.display = 'none';
+        }
+
+        async function copyMessage() {
+            if (!targetMsgContent) return;
+            try {
+                await navigator.clipboard.writeText(targetMsgContent);
+            } catch(e) {}
+            closeContext();
+        }
+
+        async function deleteMessage() {
+            if (!targetMsgId) return;
+            await client.from('messages').delete().eq('id', targetMsgId);
+            closeContext();
+        }
+
+        async function uploadMedia(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const btn = document.getElementById('media-btn');
+            const ogHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            
+            const path = `uploads/${Date.now()}_${file.name}`;
+            const { data, error } = await client.storage.from('media').upload(path, file);
+            
+            if (error) {
+                btn.innerHTML = ogHTML;
+                return openDiag("Error", "Upload failed.");
+            }
+            
+            const { data: { publicUrl } } = client.storage.from('media').getPublicUrl(path);
+            await client.from('messages').insert([{ sender: user.username, content: publicUrl }]);
+            
+            btn.innerHTML = ogHTML;
+            e.target.value = "";
+        }
+
+        function openPreview(src) {
+            document.getElementById('preview-img').src = src;
+            document.getElementById('preview-overlay').style.display = 'flex';
+        }
+
+        function closePreview() {
+            document.getElementById('preview-overlay').style.display = 'none';
+        }
+
+        async function downloadPreview() {
+            const src = document.getElementById('preview-img').src;
+            try {
+                const res = await fetch(src);
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Echora_${Date.now()}.png`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (e) {
+                window.open(src, '_blank');
+            }
+        }
+
+        async function doAuth(type) {
+            const isL = type === 'login';
+            const u = document.getElementById(isL ? 'l-user' : 's-user').value.trim();
+            const p = document.getElementById(isL ? 'l-pin' : 's-pin').value.trim();
+            const agree = document.getElementById(isL ? 'l-agree' : 's-agree').checked;
+            
+            if (!u || !p || !agree) return openDiag("Notice", "Please fill all fields and accept the policy.");
+            
+            if (type === 'signup') {
+                const { data, error } = await client.from('profiles').insert([{ username: u, pin: p }]).select();
+                if (error) return openDiag("Error", "Username taken or connection failed.");
+                user = data[0];
+            } else {
+                const { data, error } = await client.from('profiles').select('*').eq('username', u).maybeSingle();
+                if (error) return openDiag("Error", "Connection failed. Please check your database settings.");
+                if (data && data.pin == p) user = data;
+                else return openDiag("Error", "Invalid login credentials.");
+            }
+            
+            localStorage.setItem("kmr_user", JSON.stringify(user));
+            location.reload();
+        }
+
+        function init() {
+            document.getElementById('drawer-user').innerText = `Hey, ${user.username}`;
+            document.getElementById('auth-screen').classList.add('hidden');
+            load();
+            client.channel('room1').on('postgres_changes', {event:'*', schema:'public', table:'messages'}, load).subscribe();
+        }
+
+        async function load() {
+            const { data: msgs, error: msgError } = await client.from('messages').select('*').order('created_at', {ascending:true});
+            const { data: profs, error: profError } = await client.from('profiles').select('username');
+            const box = document.getElementById('chat-box');
+            
+            if (msgError) {
+                console.error("Supabase Error:", msgError);
+                return;
+            }
+            if (!msgs) return;
+            
+            let chatHTML = "";
+            let seenUsers = new Set();
+            
+            msgs.forEach(m => {
+                const displayName = (m.sender === 'Kmrxz') ? "KMRXZ(admin)" : m.sender;
+                if (!seenUsers.has(m.sender)) {
+                    chatHTML += `<div class="join-alert">${displayName} joined the chat, Say hi</div>`;
+                    seenUsers.add(m.sender);
+                }
+                const isOwn = m.sender === user.username;
+                const isAdmin = m.sender === 'Kmrxz';
+                const avatarColor = isAdmin ? 'ff4d4d' : '007aff';
+                const avatarPath = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender)}&background=${avatarColor}&color=fff&rounded=true&bold=true`;
+                const isImage = m.content.match(/\.(jpeg|jpg|gif|png|webp)$/i) || m.content.includes('supabase.co/storage');
+                const displayContent = isImage ? `<img src="${m.content}" style="max-width:100%; border-radius:10px; cursor:pointer;" onclick="openPreview('${m.content}')">` : m.content;
+                
+                chatHTML += `<div class="bubble ${isOwn ? 'own' : 'other'}" oncontextmenu="showContextMenu(event, this)" data-id="${m.id}" data-sender="${m.sender}" data-content="${encodeURIComponent(m.content)}">
+                    <img src="${avatarPath}" class="avatar">
+                    <small class="${isAdmin ? 'admin-name' : ''}" style="color:var(--blue-light); font-weight:bold;">${displayName}</small><br>
+                    <div style="margin-top:5px;">${displayContent}</div>
+                </div>`;
+            });
+            box.innerHTML = chatHTML;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        async function send() {
+            const inp = document.getElementById('msg-input');
+            if (!inp.value.trim()) return;
+            await client.from('messages').insert([{ sender: user.username, content: inp.value }]);
+            inp.value = '';
+        }
+    </script>
+</body>
+</html>
