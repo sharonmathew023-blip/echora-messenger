@@ -214,7 +214,13 @@
 
     <script>
         const client = supabase.createClient("https://didvcdoopfnrywkcfzeo.supabase.co", "sb_publishable_yy19AIo_MJnFi-yqAeXgyw_eiKpdjUz");
-        let user = JSON.parse(localStorage.getItem("kmr_user"));
+let user = null;
+        try {
+            const cachedUser = JSON.parse(localStorage.getItem("kmr_user") || "null");
+            user = cachedUser && typeof cachedUser.username === "string" ? cachedUser : null;
+        } catch (error) {
+            localStorage.removeItem("kmr_user");
+        }
         let targetMsgId = null;
         let targetMsgContent = null;
 
@@ -382,43 +388,84 @@
 
         async function load() {
             const { data: msgs, error: msgError } = await client.from('messages').select('*').order('created_at', {ascending:true});
-            const { data: profs, error: profError } = await client.from('profiles').select('username');
             const box = document.getElementById('chat-box');
-            
+
             if (msgError) {
                 console.error("Supabase Error:", msgError);
                 return;
             }
-            if (!msgs) return;
-            
-            let chatHTML = "";
-            let seenUsers = new Set();
-            
+            if (!msgs || !box) return;
+
+            // Build chat nodes with textContent. Database content is untrusted input.
+            box.replaceChildren();
+            const seenUsers = new Set();
+
             msgs.forEach(m => {
-                const displayName = (m.sender === 'Kmrxz') ? "KMRXZ(admin)" : m.sender;
-                if (!seenUsers.has(m.sender)) {
-                    chatHTML += `<div class="join-alert">${displayName} joined the chat, Say hi</div>`;
-                    seenUsers.add(m.sender);
+                const sender = String(m.sender || "Unknown");
+                const content = String(m.content || "");
+                const displayName = sender === 'Kmrxz' ? "KMRXZ(admin)" : sender;
+                if (!seenUsers.has(sender)) {
+                    const notice = document.createElement('div');
+                    notice.className = 'join-alert';
+                    notice.textContent = `${displayName} joined the chat, Say hi`;
+                    box.appendChild(notice);
+                    seenUsers.add(sender);
                 }
-                const isOwn = m.sender === user.username;
-                const isAdmin = m.sender === 'Kmrxz';
-                const avatarColor = isAdmin ? 'ff4d4d' : '10b981'; /* Updated API call color to green */
-                const avatarPath = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender)}&background=${avatarColor}&color=fff&rounded=true&bold=true`;
-                const isImage = m.content.match(/\.(jpeg|jpg|gif|png|webp)$/i) || m.content.includes('supabase.co/storage');
-                const displayContent = isImage ? `<img src="${m.content}" style="max-width:100%; border-radius:10px; cursor:pointer;" onclick="openPreview('${m.content}')">` : m.content;
-                
-                chatHTML += `<div class="bubble ${isOwn ? 'own' : 'other'}" oncontextmenu="showContextMenu(event, this)" data-id="${m.id}" data-sender="${m.sender}" data-content="${encodeURIComponent(m.content)}">
-                    <img src="${avatarPath}" class="avatar">
-                    <small class="${isAdmin ? 'admin-name' : ''}" style="color:var(--accent-light); font-weight:bold;">${displayName}</small><br>
-                    <div style="margin-top:5px;">${displayContent}</div>
-                </div>`;
+
+                const isOwn = sender === user?.username;
+                const isAdmin = sender === 'Kmrxz';
+                const bubble = document.createElement('div');
+                bubble.className = `bubble ${isOwn ? 'own' : 'other'}`;
+                bubble.dataset.id = String(m.id ?? "");
+                bubble.dataset.sender = sender;
+                bubble.dataset.content = encodeURIComponent(content);
+                bubble.addEventListener('contextmenu', event => showContextMenu(event, bubble));
+
+                const avatar = document.createElement('img');
+                avatar.className = 'avatar';
+                avatar.alt = `${displayName} avatar`;
+                avatar.referrerPolicy = 'no-referrer';
+                const avatarColor = isAdmin ? 'ff4d4d' : '10b981';
+                avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(sender)}&background=${avatarColor}&color=fff&rounded=true&bold=true`;
+
+                const name = document.createElement('small');
+                if (isAdmin) name.className = 'admin-name';
+                name.style.color = 'var(--accent-light)';
+                name.style.fontWeight = 'bold';
+                name.textContent = displayName;
+
+                const body = document.createElement('div');
+                body.style.marginTop = '5px';
+                let imageUrl = null;
+                try {
+                    const parsed = new URL(content);
+                    if (parsed.protocol === 'https:' && parsed.hostname === 'didvcdoopfnrywkcfzeo.supabase.co' && parsed.pathname.startsWith('/storage/v1/object/public/media/')) {
+                        imageUrl = parsed.href;
+                    }
+                } catch (error) { /* Non-URL messages are rendered as text. */ }
+
+                if (imageUrl) {
+                    const image = document.createElement('img');
+                    image.src = imageUrl;
+                    image.alt = 'Shared image';
+                    image.loading = 'lazy';
+                    image.style.maxWidth = '100%';
+                    image.style.borderRadius = '10px';
+                    image.style.cursor = 'pointer';
+                    image.addEventListener('click', () => openPreview(imageUrl));
+                    body.appendChild(image);
+                } else {
+                    body.textContent = content;
+                }
+
+                bubble.append(avatar, name, document.createElement('br'), body);
+                box.appendChild(bubble);
             });
-            box.innerHTML = chatHTML;
             box.scrollTop = box.scrollHeight;
         }
 
         function logout() {
-            localStorage.clear();
+            localStorage.removeItem("kmr_user");
             location.reload();
         }
 
