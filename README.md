@@ -1,10 +1,10 @@
 # Echora Messenger
 
-A small, invite-limited web chat project built around Supabase. The interface includes account access, conversations, and media-related chat features.
+A small, invite-limited web chat prototype built around Supabase. The interface includes a custom username/PIN screen, shared messages, and media uploads.
 
 ## Features
 
-- Login and account creation UI.
+- Custom username and PIN entry screens.
 - Chat message loading and sending.
 - Message copy and delete actions.
 - Media upload and preview flows.
@@ -15,20 +15,24 @@ A small, invite-limited web chat project built around Supabase. The interface in
 
 - HTML, CSS, and vanilla JavaScript.
 - Supabase JavaScript client.
-- Supabase Auth and database/storage services.
+- Supabase database and storage.
 - Font Awesome icons via CDN.
 
 ## Backend setup
 
-The frontend currently connects to a Supabase project. To run your own instance:
+The current frontend connects directly to a Supabase project and queries the `profiles`, `messages`, and `media` resources.
 
-1. Create a Supabase project.
-2. Configure the project URL and publishable/anon key in the client initialization in `index.html`.
-3. Create and configure the required `profiles`, `messages`, and `media` tables/buckets to match the queries in the application.
-4. Configure Supabase Auth redirect URLs for your local and deployed origins.
-5. Enable and test Row Level Security policies for every table and storage bucket before allowing real users.
+The current login is a legacy custom username/PIN flow stored in the `profiles` table. **It is not Supabase Auth.** The current implementation compares PIN values in the browser and caches the selected profile in local storage. Do not use this design for private accounts or sensitive conversations.
 
-A Supabase publishable/anon key is intended for browser use, but it is not a substitute for access control. Never put a service-role key in frontend code. Review database and storage policies before using real personal messages or files.
+Before using real users:
+
+1. Migrate account creation and login to Supabase Auth.
+2. Remove PIN values from the `profiles` table and never store passwords or PINs in plaintext.
+3. Enforce Row Level Security for profiles and messages, including sender identity checks.
+4. Restrict storage access to authenticated users and validate uploaded file types and sizes.
+5. Review policies so one user cannot read, alter, or delete another user's private data.
+
+A Supabase publishable/anon key is intended for browser use, but it is not a substitute for access control. Never put a service-role key in frontend code.
 
 ## Run locally
 
